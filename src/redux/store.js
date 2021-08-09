@@ -1,27 +1,29 @@
-import { createStore, combineReducers } from 'redux'
-import { composeWithDevTools } from 'redux-devtools-extension'
-import { loadContacts, saveContacts } from '../helpers/localStorage'
+import { configureStore } from '@reduxjs/toolkit'
+import { persistStore, persistReducer } from 'redux-persist'
+import storage from 'redux-persist/lib/storage'
+import logger from 'redux-logger'
 import phonebookReducer from './phonebook/phonebook-reducer'
-import throttle from 'lodash.throttle'
 
-const rootReducer = combineReducers({ contacts: phonebookReducer })
-
-const preloadedState = {
-  contacts: {
-    items: loadContacts()?.contacts?.items,
-  },
+const persistConfig = {
+  key: 'items',
+  storage,
+  blacklist: ['filter'],
 }
 
-const store = createStore(rootReducer, preloadedState, composeWithDevTools())
+const middleware = []
 
-store.subscribe(
-  throttle(() => {
-    saveContacts({
-      contacts: {
-        items: store.getState().contacts.items,
-      },
-    })
-  }, 1000),
-)
+if (process.env.NODE_ENV === `development`) {
+  middleware.push(logger)
+}
+
+const store = configureStore({
+  reducer: {
+    contacts: persistReducer(persistConfig, phonebookReducer),
+  },
+  devTools: process.env.NODE_ENV !== 'production',
+  middleware,
+})
+
+export const persistor = persistStore(store)
 
 export default store
