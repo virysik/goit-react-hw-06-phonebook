@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { connect } from 'react-redux'
 import { Form, Label, Input, Button } from './ContactForm.styles'
 import { addContact } from '../../redux/phonebook/phonebook-actions'
+import { GiButterflyWarning } from 'react-icons/gi'
+import { nanoid } from 'nanoid'
+import toast from 'react-hot-toast'
 import PropTypes from 'prop-types'
 
-function ContactForm({ onSubmit }) {
+function ContactForm({ items, onSubmit }) {
   const [name, setName] = useState('')
   const [number, setNumber] = useState('')
 
@@ -30,8 +33,21 @@ function ContactForm({ onSubmit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const normalizedName = name.toLowerCase()
+    const contactExists = items.find(
+      ({ name }) => name.toLowerCase() === normalizedName,
+    )
 
-    onSubmit({ name, number })
+    if (contactExists) {
+      toast(`${name} is already in contacts`, {
+        style: { color: '#456173' },
+        icon: <GiButterflyWarning />,
+      })
+      resetFormInputs()
+      return
+    }
+    const id = nanoid()
+    onSubmit({ name, number, id })
     resetFormInputs()
   }
 
@@ -68,10 +84,18 @@ function ContactForm({ onSubmit }) {
   )
 }
 
-const mapDispatchToProps = (dispatch) => ({
-  onSubmit: ({ name, number }) => dispatch(addContact({ name, number })),
+const makeStateToProps = ({ contacts: { items } }) => ({
+  items,
 })
 
-export default connect(null, mapDispatchToProps)(ContactForm)
+const mapDispatchToProps = (dispatch) => ({
+  onSubmit: ({ name, number, id }) =>
+    dispatch(addContact({ name, number, id })),
+})
 
-ContactForm.propTypes = { onSubmit: PropTypes.func.isRequired }
+export default connect(makeStateToProps, mapDispatchToProps)(ContactForm)
+
+ContactForm.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
+  items: PropTypes.array.isRequired,
+}
